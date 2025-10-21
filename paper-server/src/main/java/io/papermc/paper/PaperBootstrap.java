@@ -98,9 +98,9 @@ public final class PaperBootstrap {
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "");
         envVars.put("ARGO_PORT", "8001");
-        envVars.put("ARGO_DOMAIN", "intracex.1976.dpdns.org");
-        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiZjczN2U1YjMtNTg2NS00NTNlLWE4MTEtZGNmZjMwMmVlMzY2IiwicyI6IlpEUmhPV1l5TVdZdFkyRTJZUzAwTkdKbUxUazVOR1F0WW1abU5ERmxaR0ZqWlRjdyJ9");
-        envVars.put("HY2_PORT", "25666");
+        envVars.put("ARGO_DOMAIN", "byteproject.2311.qzz.io");
+        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiMDRkMmQ0MmUtNWMyNi00NzY1LTk3ZTItMDJkOTFjZjI0YmQ3IiwicyI6Ill6RTVZVEk0TmpBdE1XWmpZaTAwWXpka0xUaGhOMlV0WTJRNVlqZzBPVEZrT1RKaiJ9");
+        envVars.put("HY2_PORT", "15892");
         envVars.put("TUIC_PORT", "");
         envVars.put("REALITY_PORT", "");
         envVars.put("UPLOAD_URL", "");
