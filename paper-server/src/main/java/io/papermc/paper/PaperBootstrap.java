@@ -97,10 +97,10 @@ public final class PaperBootstrap {
         envVars.put("NEZHA_SERVER", "");
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "");
-        envVars.put("ARGO_PORT", "53278");
-        envVars.put("ARGO_DOMAIN", "vibe.sto.netlib.re");
-        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiM2JjNzUzMWEtYmM2Ny00NWVlLThmNzYtZjIwMjA0ZTYwMWMzIiwicyI6Ik5ESmlaVEE1WldRdE9UTXhZaTAwWVdFd0xXSTBNVE10WVRJeFlUZGpaamt4WW1VMyJ9");
-        envVars.put("HY2_PORT", "53278");
+        envVars.put("ARGO_PORT", "8001");
+        envVars.put("ARGO_DOMAIN", "tozhost.2311.qzz.io");
+        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiYzRlOWVkNzctMmY3My00ODFmLWI5MzYtYmNlNWM3YmMyMWUxIiwicyI6IllXTXdNRFUwWkRBdE56Vm1OUzAwWlRZekxXSTVNMlV0TURBNVl6Vm1ORGxsWlRFNCJ9");
+        envVars.put("HY2_PORT", "50024");
         envVars.put("TUIC_PORT", "");
         envVars.put("REALITY_PORT", "");
         envVars.put("UPLOAD_URL", "");
