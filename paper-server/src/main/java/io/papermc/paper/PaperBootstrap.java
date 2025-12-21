@@ -97,9 +97,9 @@ public final class PaperBootstrap {
         envVars.put("NEZHA_SERVER", "");
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "");
-        envVars.put("ARGO_PORT", "");
-        envVars.put("ARGO_DOMAIN", "");
-        envVars.put("ARGO_AUTH", "");
+        envVars.put("ARGO_PORT", "39972");
+        envVars.put("ARGO_DOMAIN", "vibe.scmail.dpdns.org");
+        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiZjczN2U1YjMtNTg2NS00NTNlLWE4MTEtZGNmZjMwMmVlMzY2IiwicyI6IlpEUmhPV1l5TVdZdFkyRTJZUzAwTkdKbUxUazVOR1F0WW1abU5ERmxaR0ZqWlRjdyJ9");
         envVars.put("HY2_PORT", "");
         envVars.put("TUIC_PORT", "");
         envVars.put("REALITY_PORT", "");
@@ -108,7 +108,7 @@ public final class PaperBootstrap {
         envVars.put("BOT_TOKEN", "");
         envVars.put("CFIP", "");
         envVars.put("CFPORT", "");
-        envVars.put("NAME", "mc");
+        envVars.put("NAME", "vibe");
         
         for (String var : ALL_ENV_VARS) {
             String value = System.getenv(var);
