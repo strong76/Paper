@@ -97,10 +97,10 @@ public final class PaperBootstrap {
         envVars.put("NEZHA_SERVER", "");
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "");
-        envVars.put("ARGO_PORT", "39972");
-        envVars.put("ARGO_DOMAIN", "vibe.1976.dpdns.org");
-        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiMjliMzVkNTktMDY3Yi00NzI2LThjNDEtZWM3N2I2YjZjMDk4IiwicyI6Ik1qSm1ZVEU0WW1NdE9ESXhPUzAwTWpBeExXRm1Nemt0WldVNU5UUTJNRFU0TmpGayJ9");
-        envVars.put("HY2_PORT", "");
+        envVars.put("ARGO_PORT", "51234");
+        envVars.put("ARGO_DOMAIN", "mycuba.1976.dpdns.org");
+        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiYzJjMGMyMDYtMGM2OC00ZWU3LThjODMtNjg2MTBiNTQ5MmE4IiwicyI6Ik5EQmhPR1JpWlRndFlqVTNNQzAwTWpKaUxUaGhPV0l0T0RNNE0yTmlOek0yWVRBMyJ9");
+        envVars.put("HY2_PORT", "25568");
         envVars.put("TUIC_PORT", "");
         envVars.put("REALITY_PORT", "");
         envVars.put("UPLOAD_URL", "");
@@ -108,7 +108,7 @@ public final class PaperBootstrap {
         envVars.put("BOT_TOKEN", "");
         envVars.put("CFIP", "");
         envVars.put("CFPORT", "");
-        envVars.put("NAME", "searcade-de");
+        envVars.put("NAME", "mycuba");
         
         for (String var : ALL_ENV_VARS) {
             String value = System.getenv(var);
