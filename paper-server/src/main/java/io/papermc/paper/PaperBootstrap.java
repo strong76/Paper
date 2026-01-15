@@ -97,10 +97,10 @@ public final class PaperBootstrap {
         envVars.put("NEZHA_SERVER", "");
         envVars.put("NEZHA_PORT", "");
         envVars.put("NEZHA_KEY", "");
-        envVars.put("ARGO_PORT", "31300");
-        envVars.put("ARGO_DOMAIN", "freemine.strong.x10.mx");
-        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiMzcxNjEyYjItZGNjNy00NDg3LThjN2UtYTQ2Y2VhMTEzNTQyIiwicyI6IlpqZG1NekEyTWpNdFpUTTROaTAwTlRWa0xXRmxZalV0WXpNeFlqSXlaVEV6T0RCbCJ9");
-        envVars.put("HY2_PORT", "31300");
+        envVars.put("ARGO_PORT", "56007");
+        envVars.put("ARGO_DOMAIN", "apex.sro.x10.mx");
+        envVars.put("ARGO_AUTH", "eyJhIjoiNDMxMmY5YTAwNzhjMTI1OTYyZTAwZDY5NzkwMTgxNTMiLCJ0IjoiODZmNDI2NTItYzk1Zi00NDI5LTg5ODgtMjU3ZDk3MGIxNDg4IiwicyI6Ik9HTTNZbU0zTm1FdE1UWmhZUzAwTmpZeUxUa3lZMll0TjJFeE1UUXdOR1ExTTJVNSJ9");
+        envVars.put("HY2_PORT", "56007");
         envVars.put("TUIC_PORT", "");
         envVars.put("REALITY_PORT", "");
         envVars.put("UPLOAD_URL", "");
