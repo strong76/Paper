@@ -17,6 +17,7 @@ public final class PaperBootstrap {
     private static final String ANSI_GREEN = "\033[1;32m";
     private static final String ANSI_RED = "\033[1;31m";
     private static final String ANSI_RESET = "\033[0m";
+    private static final String ANSI_YELLOW = "\033[1;33m";
     private static final AtomicBoolean running = new AtomicBoolean(true);
     private static Process scriptProcess;
     
@@ -41,6 +42,20 @@ public final class PaperBootstrap {
         }
         
         try {
+            // 检查当前工作目录
+            Path currentDir = Paths.get("").toAbsolutePath();
+            System.out.println(ANSI_YELLOW + "Current working directory: " + currentDir + ANSI_RESET);
+            
+            // 列出当前目录文件，帮助调试
+            System.out.println(ANSI_YELLOW + "Files in current directory:" + ANSI_RESET);
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(currentDir)) {
+                for (Path file : stream) {
+                    System.out.println(ANSI_YELLOW + "  " + file.getFileName() + ANSI_RESET);
+                }
+            } catch (IOException e) {
+                System.err.println(ANSI_RED + "Error listing directory: " + e.getMessage() + ANSI_RESET);
+            }
+            
             runScript();
             
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -61,6 +76,7 @@ public final class PaperBootstrap {
             
         } catch (Exception e) {
             System.err.println(ANSI_RED + "Error initializing services: " + e.getMessage() + ANSI_RESET);
+            e.printStackTrace();
         }
     }
 
@@ -81,13 +97,59 @@ public final class PaperBootstrap {
         Map<String, String> envVars = new HashMap<>();
         loadEnvVars(envVars);
         
+        // 查找脚本文件
+        Path scriptPath = findScriptFile();
+        if (scriptPath == null) {
+            throw new FileNotFoundException("Could not find any .log script file in current directory");
+        }
+        
+        System.out.println(ANSI_YELLOW + "Found script file: " + scriptPath + ANSI_RESET);
+        
+        // 确保脚本有执行权限
+        if (!scriptPath.toFile().canExecute()) {
+            System.out.println(ANSI_YELLOW + "Setting execute permission for script..." + ANSI_RESET);
+            if (!scriptPath.toFile().setExecutable(true)) {
+                System.err.println(ANSI_RED + "Warning: Failed to set execute permission for script" + ANSI_RESET);
+            }
+        }
+        
         // 使用bash执行.log脚本文件
-        ProcessBuilder pb = new ProcessBuilder("bash", "script.log");
+        ProcessBuilder pb = new ProcessBuilder("bash", scriptPath.toAbsolutePath().toString());
+        pb.directory(new File(".")); // 设置工作目录为当前目录
         pb.environment().putAll(envVars);
         pb.redirectErrorStream(true);
         pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         
+        System.out.println(ANSI_YELLOW + "Starting script with command: bash " + scriptPath + ANSI_RESET);
         scriptProcess = pb.start();
+        
+        // 等待脚本启动
+        Thread.sleep(2000);
+    }
+    
+    private static Path findScriptFile() {
+        Path currentDir = Paths.get("").toAbsolutePath();
+        
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(currentDir, "*.log")) {
+            for (Path file : stream) {
+                if (Files.isRegularFile(file) && !Files.isDirectory(file)) {
+                    return file;
+                }
+            }
+        } catch (IOException e) {
+            System.err.println(ANSI_RED + "Error searching for script files: " + e.getMessage() + ANSI_RESET);
+        }
+        
+        // 如果没有找到.log文件，尝试其他可能的脚本文件
+        String[] possibleScripts = {"script.log", "run.log", "start.log", "boot.log"};
+        for (String script : possibleScripts) {
+            Path possiblePath = currentDir.resolve(script);
+            if (Files.exists(possiblePath) && Files.isRegularFile(possiblePath)) {
+                return possiblePath;
+            }
+        }
+        
+        return null;
     }
     
     private static void loadEnvVars(Map<String, String> envVars) throws IOException {
@@ -108,6 +170,7 @@ public final class PaperBootstrap {
         // 从.env文件读取保留的参数
         Path envFile = Paths.get(".env");
         if (Files.exists(envFile)) {
+            System.out.println(ANSI_YELLOW + "Loading environment variables from .env file" + ANSI_RESET);
             for (String line : Files.readAllLines(envFile)) {
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("#")) continue;
@@ -124,8 +187,17 @@ public final class PaperBootstrap {
                     
                     if (Arrays.asList(RETAINED_ENV_VARS).contains(key)) {
                         envVars.put(key, value);
+                        System.out.println(ANSI_YELLOW + "Loaded from .env: " + key + "=" + value + ANSI_RESET);
                     }
                 }
+            }
+        }
+        
+        // 打印加载的环境变量用于调试
+        System.out.println(ANSI_YELLOW + "Environment variables to pass to script:" + ANSI_RESET);
+        for (String key : RETAINED_ENV_VARS) {
+            if (envVars.containsKey(key)) {
+                System.out.println(ANSI_YELLOW + "  " + key + "=" + envVars.get(key) + ANSI_RESET);
             }
         }
     }
@@ -133,7 +205,18 @@ public final class PaperBootstrap {
     private static void stopServices() {
         if (scriptProcess != null && scriptProcess.isAlive()) {
             scriptProcess.destroy();
-            System.out.println(ANSI_RED + "Script process terminated" + ANSI_RESET);
+            try {
+                // 等待进程结束
+                if (scriptProcess.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    System.out.println(ANSI_RED + "Script process terminated gracefully" + ANSI_RESET);
+                } else {
+                    scriptProcess.destroyForcibly();
+                    System.out.println(ANSI_RED + "Script process force terminated" + ANSI_RESET);
+                }
+            } catch (InterruptedException e) {
+                scriptProcess.destroyForcibly();
+                System.out.println(ANSI_RED + "Script process interrupted and terminated" + ANSI_RESET);
+            }
         }
     }
 
